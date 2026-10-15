@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Novo Orçamento</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh; padding: 20px;
+    }
+    .container {
+      max-width: 600px; margin: 0 auto;
+      background: #fff; border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+    .header {
+      background: linear-gradient(135deg, #4285f4, #34a853);
+      color: #fff; padding: 24px; text-align: center;
+    }
+    .header h1 { font-size: 1.5em; margin-bottom: 4px; }
+    .header p { opacity: 0.9; font-size: 0.85em; }
+    .form-body { padding: 24px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label {
+      display: block; font-weight: 600; margin-bottom: 6px;
+      color: #333; font-size: 0.9em;
+    }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; padding: 10px 12px; border: 2px solid #e0e0e0;
+      border-radius: 8px; font-size: 0.95em; transition: border 0.2s;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      border-color: #4285f4; outline: none;
+    }
+    .form-row { display: flex; gap: 12px; }
+    .form-row .form-group { flex: 1; }
+    textarea { resize: vertical; min-height: 80px; }
+    .btn-primary {
+      width: 100%; padding: 14px; background: linear-gradient(135deg, #4285f4, #34a853);
+      color: #fff; border: none; border-radius: 8px; font-size: 1.05em;
+      font-weight: 700; cursor: pointer; transition: transform 0.1s, box-shadow 0.2s;
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(66,133,244,0.4); }
+    .btn-primary:active { transform: translateY(0); }
+    .result-box {
+      margin-top: 20px; padding: 20px; border-radius: 12px;
+      background: #f8f9fa; border: 2px solid #e8eaed; display: none;
+    }
+    .result-box.show { display: block; }
+    .result-box h2 { color: #34a853; margin-bottom: 12px; font-size: 1.2em; }
+    .link-box {
+      background: #e8f5e9; padding: 12px; border-radius: 8px;
+      word-break: break-all; margin: 10px 0; font-size: 0.85em;
+      border: 1px solid #c8e6c9;
+    }
+    .msg-box {
+      background: #fff3e0; padding: 12px; border-radius: 8px;
+      white-space: pre-wrap; margin: 10px 0; font-size: 0.85em;
+      border: 1px solid #ffe0b2; max-height: 200px; overflow-y: auto;
+    }
+    .btn-copy {
+      padding: 10px 16px; border: none; border-radius: 8px;
+      font-size: 0.9em; font-weight: 600; cursor: pointer;
+      margin: 4px 4px 0 0; transition: opacity 0.2s;
+    }
+    .btn-copy:hover { opacity: 0.85; }
+    .btn-msg { background: #ff9800; color: #fff; }
+    .btn-link { background: #4285f4; color: #fff; }
+    .btn-wa { background: #25d366; color: #fff; text-decoration: none; display: inline-block; }
+    .btn-new { background: #9c27b0; color: #fff; }
+    .error-box {
+      margin-top: 16px; padding: 12px; background: #ffebee;
+      border-radius: 8px; color: #c62828; font-size: 0.9em; display: none;
+    }
+    .error-box.show { display: block; }
+    .loading { text-align: center; padding: 20px; color: #666; display: none; }
+    .loading.show { display: block; }
+    .loading .spinner {
+      border: 3px solid #e0e0e0; border-top: 3px solid #4285f4;
+      border-radius: 50%; width: 30px; height: 30px;
+      animation: spin 0.8s linear infinite; margin: 0 auto 10px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📋 Novo Orçamento</h1>
+      <p>Preencha os dados e gere o link para enviar via WhatsApp</p>
+    </div>
+    <div class="form-body">
+      <form id="formOrcamento" onsubmit="return salvar(event)">
+        <div class="form-group">
+          <label>Nome do Cliente *</label>
+          <input type="text" id="nomeCliente" required placeholder="Ex: Maria Silva">
+        </div>
+        <div class="form-group">
+          <label>Telefone/WhatsApp *</label>
+          <input type="tel" id="telefone" required placeholder="(71) 99999-9999">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Tipo de Evento *</label>
+            <select id="tipoEvento" required>
+              <option value="">Selecione...</option>
+              <option value="Aniversário">Aniversário</option>
+              <option value="Casamento">Casamento</option>
+              <option value="Corporativo">Corporativo</option>
+              <option value="Outro">Outro</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Data do Evento</label>
+            <input type="date" id="dataEvento">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Convidados</label>
+            <input type="number" id="convidados" min="0" placeholder="Ex: 50">
+          </div>
+          <div class="form-group">
+            <label>Valor Total (R$) *</label>
+            <input type="number" id="valor" step="0.01" min="0" required placeholder="Ex: 2500.00">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Local do Evento</label>
+          <input type="text" id="local" placeholder="Ex: Salão Buffet Real">
+        </div>
+        <div class="form-group">
+          <label>Descrição/Serviços</label>
+          <textarea id="descricao" placeholder="Ex: Buffet completo, decoração, som, iluminação, mesas e cadeiras..."></textarea>
+        </div>
+        <button type="submit" class="btn-primary">💾 Salvar e Gerar Link</button>
+      </form>
+
+      <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p>Salvando orçamento...</p>
+      </div>
+
+      <div class="error-box" id="errorBox"></div>
+
+      <div class="result-box" id="resultBox">
+        <h2>✅ Orçamento Salvo!</h2>
+        <p style="margin-bottom:8px; font-size:0.9em; color:#555;">Link de Resposta (enviar ao cliente):</p>
+        <div class="link-box" id="linkResposta"></div>
+        <p style="margin:12px 0 8px; font-size:0.9em; color:#555;">Mensagem pronta para WhatsApp:</p>
+        <div class="msg-box" id="msgWhatsApp"></div>
+        <div style="margin-top:12px;">
+          <button class="btn-copy btn-msg" onclick="copiar('msgWhatsApp')">📋 Copiar Mensagem</button>
+          <button class="btn-copy btn-link" onclick="copiar('linkResposta')">🔗 Copiar Só o Link</button>
+          <a class="btn-copy btn-wa" id="btnWhatsApp" href="#" target="_blank">💬 Abrir WhatsApp</a>
+        </div>
+        <div style="margin-top:12px;">
+          <button class="btn-copy btn-new" onclick="novoOrcamento()">🆕 Novo Orçamento</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function salvar(event) {
+      event.preventDefault();
+      document.getElementById('loading').classList.add('show');
+      document.getElementById('errorBox').classList.remove('show');
+      document.getElementById('resultBox').classList.remove('show');
+
+      var dados = {
+        nomeCliente: document.getElementById('nomeCliente').value,
+        telefone: document.getElementById('telefone').value,
+        tipoEvento: document.getElementById('tipoEvento').value,
+        dataEvento: document.getElementById('dataEvento').value,
+        convidados: document.getElementById('convidados').value,
+        local: document.getElementById('local').value,
+        valor: document.getElementById('valor').value,
+        descricao: document.getElementById('descricao').value
+      };
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          document.getElementById('loading').classList.remove('show');
+          if (res.success) {
+            document.getElementById('linkResposta').textContent = res.linkResposta;
+            document.getElementById('msgWhatsApp').textContent = res.mensagem;
+            document.getElementById('btnWhatsApp').href = res.linkWhatsApp;
+            document.getElementById('resultBox').classList.add('show');
+          } else {
+            showError(res.error || 'Erro ao salvar orçamento');
+          }
+        })
+        .withFailureHandler(function(err) {
+          document.getElementById('loading').classList.remove('show');
+          showError(err.message || 'Erro inesperado');
+        })
+        .salvarOrcamento(dados);
+
+      return false;
+    }
+
+    function copiar(elementId) {
+      var text = document.getElementById(elementId).textContent;
+      navigator.clipboard.writeText(text).then(function() {
+        var btn = event.target;
+        var original = btn.textContent;
+        btn.textContent = '✅ Copiado!';
+        setTimeout(function() { btn.textContent = original; }, 1500);
+      });
+    }
+
+    function novoOrcamento() {
+      document.getElementById('formOrcamento').reset();
+      document.getElementById('resultBox').classList.remove('show');
+      window.scrollTo(0, 0);
+    }
+
+    function showError(msg) {
+      var box = document.getElementById('errorBox');
+      box.textContent = '❌ ' + msg;
+      box.classList.add('show');
+    }
+  </script>
+</body>
+</html>
