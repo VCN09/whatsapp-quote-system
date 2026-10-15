@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seu Orçamento</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh; display: flex; align-items: center;
+      justify-content: center; padding: 16px;
+    }
+    .card {
+      max-width: 450px; width: 100%; background: #fff;
+      border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+    .header {
+      background: linear-gradient(135deg, #4285f4, #34a853);
+      color: #fff; padding: 28px 24px; text-align: center;
+    }
+    .header h1 { font-size: 1.3em; margin-bottom: 6px; }
+    .header p { opacity: 0.85; font-size: 0.85em; }
+    .body { padding: 24px; }
+    .info-row {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      padding: 10px 0; border-bottom: 1px solid #f0f0f0;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { font-weight: 600; color: #555; font-size: 0.85em; flex-shrink: 0; }
+    .info-value { text-align: right; color: #333; font-size: 0.95em; word-break: break-word; }
+    .valor-destaque {
+      font-size: 1.8em; font-weight: 800; color: #34a853;
+      text-align: center; padding: 16px; margin: 16px 0;
+      background: #f1f8f4; border-radius: 12px;
+    }
+    .descricao-box {
+      background: #f8f9fa; padding: 14px; border-radius: 10px;
+      margin: 12px 0; font-size: 0.88em; line-height: 1.5; color: #444;
+      white-space: pre-wrap; border: 1px solid #e8eaed;
+    }
+    .btn-group { margin-top: 24px; display: flex; flex-direction: column; gap: 10px; }
+    .btn {
+      padding: 16px; border: none; border-radius: 12px;
+      font-size: 1.05em; font-weight: 700; cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.2s; color: #fff;
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,0.2); }
+    .btn:active { transform: translateY(0); }
+    .btn-aceitar { background: linear-gradient(135deg, #34a853, #2e7d32); }
+    .btn-negociar { background: linear-gradient(135deg, #ff9800, #f57c00); }
+    .btn-recusar { background: linear-gradient(135deg, #ea4335, #c62828); }
+    .loading { text-align: center; padding: 40px; color: #666; }
+    .spinner {
+      border: 3px solid #e0e0e0; border-top: 3px solid #4285f4;
+      border-radius: 50%; width: 36px; height: 36px;
+      animation: spin 0.8s linear infinite; margin: 0 auto 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error-page { text-align: center; padding: 40px; color: #c62828; }
+    .confirmacao {
+      text-align: center; padding: 32px 24px;
+    }
+    .confirmacao .icon {
+      width: 80px; height: 80px; border-radius: 50%;
+      margin: 0 auto 16px; display: flex; align-items: center;
+      justify-content: center; font-size: 2.5em;
+    }
+    .icon-aceitar { background: #e8f5e9; color: #34a853; }
+    .icon-negociar { background: #fff3e0; color: #ff9800; }
+    .icon-recusar { background: #ffebee; color: #ea4335; }
+    .confirmacao h2 { margin-bottom: 8px; font-size: 1.3em; color: #333; }
+    .confirmacao p { color: #666; font-size: 0.95em; line-height: 1.5; }
+    .badge-status {
+      display: inline-block; padding: 6px 16px; border-radius: 20px;
+      font-size: 0.85em; font-weight: 700; margin: 0 auto 16px;
+    }
+    .badge-aceito { background: #e8f5e9; color: #2e7d32; }
+    .badge-negociar { background: #fff3e0; color: #f57c00; }
+    .badge-negado { background: #ffebee; color: #c62828; }
+    .badge-pendente { background: #fffde7; color: #f9a825; }
+    .badge-wrap { text-align: center; margin-bottom: 16px; }
+    .btn-disabled {
+      opacity: 0.5; cursor: not-allowed; pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="card" id="mainCard">
+    <div id="loadingView">
+      <div class="header">
+        <h1>📋 Seu Orçamento</h1>
+        <p>Carregando...</p>
+      </div>
+      <div class="loading">
+        <div class="spinner"></div>
+        <p>Buscando seu orçamento...</p>
+      </div>
+    </div>
+
+    <div id="errorView" style="display:none;">
+      <div class="header">
+        <h1>❌ Orçamento não encontrado</h1>
+      </div>
+      <div class="error-page">
+        <p style="margin-bottom:16px;">Não conseguimos encontrar este orçamento.</p>
+        <p style="font-size:0.85em; color:#999;">Verifique se o link está correto ou entre em contato com a empresa.</p>
+      </div>
+    </div>
+
+    <div id="orcamentoView" style="display:none;">
+      <div class="header">
+        <h1>📋 Seu Orçamento</h1>
+        <p id="orcamentoTipo"></p>
+      </div>
+      <div class="body">
+        <div class="badge-wrap" id="badgeWrap"></div>
+        <div class="info-row">
+          <span class="info-label">Cliente</span>
+          <span class="info-value" id="orcNome"></span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Data do Evento</span>
+          <span class="info-value" id="orcData"></span>
+        </div>
+        <div class="info-row" id="rowConvidados">
+          <span class="info-label">Convidados</span>
+          <span class="info-value" id="orcConvidados"></span>
+        </div>
+        <div class="info-row" id="rowLocal">
+          <span class="info-label">Local</span>
+          <span class="info-value" id="orcLocal"></span>
+        </div>
+        <div class="valor-destaque" id="orcValor"></div>
+        <div id="descricaoContainer">
+          <p style="font-weight:600; color:#555; font-size:0.85em; margin-bottom:6px;">Serviços inclusos:</p>
+          <div class="descricao-box" id="orcDescricao"></div>
+        </div>
+        <div class="btn-group" id="btnGroup">
+          <button class="btn btn-aceitar" onclick="responder('aceitar')">✅ Aceitar</button>
+          <button class="btn btn-negociar" onclick="responder('negociar')">🤝 Negociar</button>
+          <button class="btn btn-recusar" onclick="responder('recusar')">❌ Recusar</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="confirmacaoView" style="display:none;">
+      <div class="confirmacao">
+        <div class="icon" id="confirmIcon"></div>
+        <h2 id="confirmTitle"></h2>
+        <p id="confirmMsg"></p>
+        <p style="margin-top:16px; font-size:0.8em; color:#999;">Obrigado pela sua resposta!</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var orcamentoId = '<?!= orcamentoId ?>';
+
+    function init() {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          document.getElementById('loadingView').style.display = 'none';
+          if (res.success) {
+            mostrarOrcamento(res.orcamento);
+          } else {
+            document.getElementById('errorView').style.display = 'block';
+          }
+        })
+        .withFailureHandler(function(err) {
+          document.getElementById('loadingView').style.display = 'none';
+          document.getElementById('errorView').style.display = 'block';
+        })
+        .getOrcamento(orcamentoId);
+    }
+
+    function mostrarOrcamento(orc) {
+      document.getElementById('orcamentoTipo').textContent = orc.tipoEvento;
+      document.getElementById('orcNome').textContent = orc.nomeCliente;
+      document.getElementById('orcData').textContent = orc.dataEvento || 'Não definida';
+      document.getElementById('orcConvidados').textContent = orc.convidados || '—';
+      document.getElementById('orcLocal').textContent = orc.local || '—';
+      document.getElementById('orcValor').textContent = 'R$ ' + Number(orc.valor).toFixed(2).replace('.', ',');
+      document.getElementById('orcDescricao').textContent = orc.descricao || 'Sem descrição';
+
+      if (!orc.local) document.getElementById('rowLocal').style.display = 'none';
+      if (!orc.convidados) document.getElementById('rowConvidados').style.display = 'none';
+      if (!orc.descricao) document.getElementById('descricaoContainer').style.display = 'none';
+
+      // Verifica se já foi respondido
+      if (orc.status && orc.status !== 'Pendente' && orc.status !== '') {
+        var badgeMap = {
+          'Aceito': { class: 'badge-aceito', text: '✅ Aceito' },
+          'Negociar': { class: 'badge-negociar', text: '🤝 Em Negociação' },
+          'Negado': { class: 'badge-negado', text: '❌ Recusado' }
+        };
+        var badge = badgeMap[orc.status] || badgeMap['Pendente'];
+        document.getElementById('badgeWrap').innerHTML = '<span class="badge-status ' + badge.class + '">' + badge.text + '</span>';
+        document.getElementById('btnGroup').innerHTML = '<p style="text-align:center; color:#999; padding:16px;">Você já respondeu a este orçamento em ' + (orc.dataResposta || '') + '</p>';
+      } else {
+        document.getElementById('badgeWrap').innerHTML = '<span class="badge-status badge-pendente">⏳ Aguardando sua resposta</span>';
+      }
+
+      document.getElementById('orcamentoView').style.display = 'block';
+    }
+
+    function responder(resposta) {
+      // Desabilitar botões imediatamente
+      var btns = document.querySelectorAll('.btn');
+      btns.forEach(function(b) { b.classList.add('btn-disabled'); });
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res.success) {
+            mostrarConfirmacao(resposta, res.status);
+          } else if (res.jaRespondido) {
+            mostrarConfirmacao('jaRespondido', res.statusAtual);
+          } else {
+            alert('Erro: ' + (res.error || 'Não foi possível registrar'));
+            btns.forEach(function(b) { b.classList.remove('btn-disabled'); });
+          }
+        })
+        .withFailureHandler(function(err) {
+          alert('Erro inesperado: ' + err.message);
+          btns.forEach(function(b) { b.classList.remove('btn-disabled'); });
+        })
+        .registrarResposta(orcamentoId, resposta);
+    }
+
+    function mostrarConfirmacao(resposta, status) {
+      document.getElementById('orcamentoView').style.display = 'none';
+      document.getElementById('confirmacaoView').style.display = 'block';
+
+      var configs = {
+        'aceitar': {
+          iconClass: 'icon-aceitar', icon: '✅',
+          title: 'Orçamento Aceito!',
+          msg: 'Sua resposta foi registrada. A equipe entrará em contato para os próximos passos.'
+        },
+        'negociar': {
+          iconClass: 'icon-negociar', icon: '🤝',
+          title: 'Negociação Iniciada!',
+          msg: 'Sua solicitação de negociação foi registrada. A equipe entrará em contato em breve.'
+        },
+        'recusar': {
+          iconClass: 'icon-recusar', icon: '❌',
+          title: 'Orçamento Recusado',
+          msg: 'Sua resposta foi registrada. Agradecemos a sua atenção!'
+        },
+        'jaRespondido': {
+          iconClass: 'icon-negociar', icon: 'ℹ️',
+          title: 'Orçamento já respondido',
+          msg: 'Este orçamento já foi respondido anteriormente. Status atual: ' + status
+        }
+      };
+
+      var c = configs[resposta] || configs['jaRespondido'];
+      var iconEl = document.getElementById('confirmIcon');
+      iconEl.className = 'icon ' + c.iconClass;
+      iconEl.textContent = c.icon;
+      document.getElementById('confirmTitle').textContent = c.title;
+      document.getElementById('confirmMsg').textContent = c.msg;
+    }
+
+    init();
+  </script>
+</body>
+</html>
