@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Executivo</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background: #0f172a; color: #e2e8f0; min-height: 100vh; padding: 16px;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #1e3a5f, #2563eb, #1e3a5f);
+      border-radius: 16px; padding: 20px 28px; margin-bottom: 20px;
+      display: flex; justify-content: space-between; align-items: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+    .header h1 { font-size: 1.4em; color: #fff; }
+    .header .live {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 0.8em; color: #4ade80;
+    }
+    .live-dot {
+      width: 10px; height: 10px; background: #4ade80;
+      border-radius: 50%; animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.8); }
+    }
+    .header .atualizado { font-size: 0.75em; color: #94a3b8; margin-top: 4px; }
+
+    /* Grid */
+    .grid-kpis {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px; margin-bottom: 16px;
+    }
+    .grid-fin {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px; margin-bottom: 20px;
+    }
+    .kpi-card {
+      background: #1e293b; border-radius: 12px; padding: 16px;
+      border-left: 4px solid; transition: transform 0.2s;
+    }
+    .kpi-card:hover { transform: translateY(-2px); }
+    .kpi-card .label { font-size: 0.75em; color: #94a3b8; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .kpi-card .value { font-size: 1.6em; font-weight: 700; color: #f1f5f9; }
+    .kpi-total { border-color: #3b82f6; }
+    .kpi-pendente { border-color: #ff9800; }
+    .kpi-aceito { border-color: #34a853; }
+    .kpi-negado { border-color: #ea4335; }
+    .kpi-negociar { border-color: #9c27b0; }
+    .kpi-conv { border-color: #fbbf24; }
+    .fin-card {
+      background: #1e293b; border-radius: 12px; padding: 18px;
+      border-left: 4px solid #2563eb;
+    }
+    .fin-card .label { font-size: 0.78em; color: #94a3b8; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .fin-card .value { font-size: 1.5em; font-weight: 700; color: #f1f5f9; }
+    .fin-card .sub { font-size: 0.72em; color: #64748b; margin-top: 4px; }
+
+    /* Charts */
+    .charts-row {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;
+    }
+    .chart-box {
+      background: #1e293b; border-radius: 12px; padding: 20px;
+    }
+    .chart-box h3 { color: #e2e8f0; font-size: 0.95em; margin-bottom: 12px; }
+    canvas { max-height: 260px; }
+
+    /* Funil */
+    .funil {
+      background: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 20px;
+    }
+    .funil h3 { color: #e2e8f0; font-size: 0.95em; margin-bottom: 16px; }
+    .funil-stage {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 10px;
+    }
+    .funil-bar {
+      height: 36px; border-radius: 8px; display: flex; align-items: center;
+      padding: 0 14px; color: #fff; font-weight: 700; font-size: 0.9em;
+      transition: width 0.5s ease;
+    }
+    .funil-enviados { background: linear-gradient(90deg, #3b82f6, #2563eb); }
+    .funil-respondidos { background: linear-gradient(90deg, #f59e0b, #d97706); }
+    .funil-aceitos { background: linear-gradient(90deg, #22c55e, #16a34a); }
+    .funil-label { width: 100px; font-size: 0.82em; color: #94a3b8; }
+
+    /* Projeções */
+    .proj-table {
+      background: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 20px; overflow-x: auto;
+    }
+    .proj-table h3 { color: #e2e8f0; font-size: 0.95em; margin-bottom: 12px; }
+    .proj-table table { width: 100%; border-collapse: collapse; }
+    .proj-table th { text-align: left; color: #94a3b8; font-size: 0.78em; padding: 8px; border-bottom: 1px solid #334155; text-transform: uppercase; }
+    .proj-table td { padding: 10px 8px; border-bottom: 1px solid #1e293b; font-size: 0.9em; }
+    .proj-table td.valor { color: #4ade80; font-weight: 600; }
+    .proj-table tr.pessimista td.valor { color: #f87171; }
+    .proj-table tr.otimista td.valor { color: #fbbf24; }
+    .tendencia-badge {
+      display: inline-block; padding: 4px 12px; border-radius: 20px;
+      font-size: 0.8em; font-weight: 600;
+    }
+    .tendencia-melhorando { background: #166534; color: #4ade80; }
+    .tendencia-declinando { background: #7f1d1d; color: #f87171; }
+    .tendencia-estavel { background: #374151; color: #d1d5db; }
+
+    /* Agenda */
+    .agenda {
+      background: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 20px;
+    }
+    .agenda h3 { color: #e2e8f0; font-size: 0.95em; margin-bottom: 14px; }
+    .evento-item {
+      display: flex; align-items: center; gap: 12px; padding: 12px;
+      border-radius: 10px; margin-bottom: 8px; background: #0f172a;
+      border-left: 4px solid;
+    }
+    .evento-urgente { border-color: #ef4444; background: #1a0f0f; }
+    .evento-proximo { border-color: #f59e0b; background: #1a150f; }
+    .evento-normal { border-color: #334155; }
+    .evento-data { font-size: 0.85em; color: #94a3b8; min-width: 80px; }
+    .evento-info { flex: 1; }
+    .evento-info .tipo { font-weight: 600; color: #e2e8f0; font-size: 0.9em; }
+    .evento-info .cli { font-size: 0.8em; color: #64748b; }
+    .evento-dias {
+      font-size: 0.85em; font-weight: 700; padding: 4px 10px;
+      border-radius: 8px; min-width: 70px; text-align: center;
+    }
+    .evento-dias.urgente { background: #ef4444; color: #fff; }
+    .evento-dias.proximo { background: #f59e0b; color: #000; }
+    .evento-dias.normal { background: #334155; color: #cbd5e1; }
+    .evento-empty { text-align: center; color: #64748b; padding: 20px; font-size: 0.9em; }
+
+    /* Loading */
+    .loading-overlay {
+      position: fixed; inset: 0; background: rgba(15,23,42,0.8);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 999; display: none;
+    }
+    .loading-overlay.show { display: flex; }
+    .spinner {
+      border: 3px solid #334155; border-top: 3px solid #3b82f6;
+      border-radius: 50%; width: 40px; height: 40px;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .charts-row { grid-template-columns: 1fr; }
+      .kpi-card .value { font-size: 1.3em; }
+      .header { flex-direction: column; gap: 8px; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div>
+        <h1>📊 Dashboard Executivo</h1>
+        <div class="atualizado" id="atualizadoEm">Carregando...</div>
+      </div>
+      <div class="live">
+        <span class="live-dot"></span>
+        AO VIVO
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="grid-kpis">
+      <div class="kpi-card kpi-total"><div class="label">Total Orçamentos</div><div class="value" id="kpiTotal">0</div></div>
+      <div class="kpi-card kpi-pendente"><div class="label">Pendentes</div><div class="value" id="kpiPendentes">0</div></div>
+      <div class="kpi-card kpi-aceito"><div class="label">Aceitos</div><div class="value" id="kpiAceitos">0</div></div>
+      <div class="kpi-card kpi-negado"><div class="label">Negados</div><div class="value" id="kpiNegados">0</div></div>
+      <div class="kpi-card kpi-negociar"><div class="label">Em Negociação</div><div class="value" id="kpiNegociar">0</div></div>
+      <div class="kpi-card kpi-conv"><div class="label">Taxa de Conversão</div><div class="value" id="kpiConv">0%</div></div>
+    </div>
+
+    <!-- Financeiro -->
+    <div class="grid-fin">
+            <div class="fin-card">
+        <div class="label">💰 Faturado (Aceito)</div>
+        <div class="value" id="finFaturado">R$ 0,00</div>
+        <div class="sub" id="finFaturadoSub">0 eventos</div>
+      </div>
+      <div class="fin-card">
+        <div class="label">⏳ Em Aberto (Pendente)</div>
+        <div class="value" id="finAberto">R$ 0,00</div>
+        <div class="sub" id="finAbertoSub">0 orçamentos</div>
+      </div>
+      <div class="fin-card">
+        <div class="label">🤝 Em Negociação</div>
+        <div class="value" id="finNegociar">R$ 0,00</div>
+        <div class="sub" id="finNegociarSub">0 orçamentos</div>
+      </div>
+      <div class="fin-card">
+        <div class="label">📊 Ticket Médio</div>
+        <div class="value" id="finTicket">R$ 0,00</div>
+        <div class="sub">por evento aceito</div>
+      </div>
+    </div>
+
+    <!-- Gráficos -->
+    <div class="charts-row">
+      <div class="chart-box">
+        <h3>📎 Distribuição de Status</h3>
+        <canvas id="chartDoughnut"></canvas>
+      </div>
+      <div class="chart-box">
+        <h3>📈 Evolução (14 dias)</h3>
+        <canvas id="chartLinha"></canvas>
+      </div>
+    </div>
+
+    <!-- Funil de Conversão -->
+    <div class="funil">
+      <h3>🔽 Funil de Conversão</h3>
+      <div class="funil-stage">
+        <span class="funil-label">Enviados</span>
+        <div class="funil-bar funil-enviados" id="funilEnviados" style="width:100%;">0</div>
+      </div>
+      <div class="funil-stage">
+        <span class="funil-label">Respondidos</span>
+        <div class="funil-bar funil-respondidos" id="funilRespondidos" style="width:0%;">0</div>
+      </div>
+      <div class="funil-stage">
+        <span class="funil-label">Aceitos</span>
+        <div class="funil-bar funil-aceitos" id="funilAceitos" style="width:0%;">0</div>
+      </div>
+    </div>
+
+    <!-- Projeções -->
+    <div class="proj-table">
+      <h3>🔮 Projeções e Cenários</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Métrica</th>
+            <th>Valor</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Dias Decorridos</td><td id="projDias">0</td></tr>
+          <tr><td>Média Diária</td><td id="projMediaDiaria">0</td></tr>
+          <tr><td>Projeção Mensal (orçamentos)</td><td id="projMensal">0</td></tr>
+          <tr class="pessimista"><td>Faturamento Pessimista (-30%)</td><td class="valor" id="projPessimista">R$ 0,00</td></tr>
+          <tr><td>Faturamento Realista</td><td class="valor" id="projRealista">R$ 0,00</td></tr>
+          <tr class="otimista"><td>Faturamento Otimista (+15%)</td><td class="valor" id="projOtimista">R$ 0,00</td></tr>
+          <tr><td>Conversão Últimos 7 dias</td><td id="projConv7">0%</td></tr>
+          <tr><td>Tendência</td><td><span class="tendencia-badge tendencia-estavel" id="projTendencia">Estável</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Agenda de Próximos Eventos -->
+    <div class="agenda">
+      <h3>📅 Próximos Eventos</h3>
+      <div id="agendaLista">
+        <div class="evento-empty">Carregando eventos...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+  </div>
+
+  <script>
+    var chartDoughnut = null;
+    var chartLinha = null;
+
+    function formatarMoeda(valor) {
+      return 'R$ ' + Number(valor || 0).toFixed(2).replace('.', ',');
+    }
+
+    function formatarPct(valor) {
+      return Number(valor || 0).toFixed(1) + '%';
+    }
+
+    function carregarDados() {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res.success) {
+            renderizarBI(res);
+          }
+          document.getElementById('loadingOverlay').classList.remove('show');
+        })
+        .withFailureHandler(function(err) {
+          document.getElementById('loadingOverlay').classList.remove('show');
+          console.error('Erro BI:', err);
+        })
+        .getMetricasBI();
+    }
+
+    function renderizarBI(data) {
+      var k = data.kpis;
+      var p = data.projecoes;
+
+      // KPIs
+      document.getElementById('kpiTotal').textContent = k.total;
+      document.getElementById('kpiPendentes').textContent = k.pendentes;
+      document.getElementById('kpiAceitos').textContent = k.aceitos;
+      document.getElementById('kpiNegados').textContent = k.negados;
+      document.getElementById('kpiNegociar').textContent = k.negociar;
+      document.getElementById('kpiConv').textContent = formatarPct(k.taxaConv);
+
+      // Financeiro
+      document.getElementById('finFaturado').textContent = formatarMoeda(k.valFaturado);
+      document.getElementById('finFaturadoSub').textContent = k.eventosConfirmados + ' eventos';
+      document.getElementById('finAberto').textContent = formatarMoeda(k.valAberto);
+      document.getElementById('finAbertoSub').textContent = k.pendentes + ' orçamentos';
+      document.getElementById('finNegociar').textContent = formatarMoeda(k.valNegociar);
+      document.getElementById('finNegociarSub').textContent = k.negociar + ' orçamentos';
+      document.getElementById('finTicket').textContent = formatarMoeda(k.ticketMedio);
+
+      // Projeções
+      document.getElementById('projDias').textContent = p.diasDecorridos;
+      document.getElementById('projMediaDiaria').textContent = p.mediaDiaria.toFixed(1);
+      document.getElementById('projMensal').textContent = Math.round(p.projMensal);
+      document.getElementById('projPessimista').textContent = formatarMoeda(p.fatPessimista);
+      document.getElementById('projRealista').textContent = formatarMoeda(p.fatRealista);
+      document.getElementById('projOtimista').textContent = formatarMoeda(p.fatOtimista);
+      document.getElementById('projConv7').textContent = formatarPct(p.conv7);
+
+      // Tendência
+      var tendEl = document.getElementById('projTendencia');
+      var tendClass = 'tendencia-estavel';
+      var tendText = 'Estável';
+      if (p.tendencia === 'Melhorando') { tendClass = 'tendencia-melhorando'; tendText = '📈 Melhorando'; }
+      else if (p.tendencia === 'Declinando') { tendClass = 'tendencia-declinando'; tendText = '📉 Declinando'; }
+      else { tendText = '➡️ Estável'; }
+      tendEl.className = 'tendencia-badge ' + tendClass;
+      tendEl.textContent = tendText;
+
+      // Atualizado em
+      document.getElementById('atualizadoEm').textContent = 'Atualizado: ' + data.atualizadoEm;
+
+      // Funil
+      var f = data.funil;
+      var maxFunil = Math.max(f.enviados, 1);
+      document.getElementById('funilEnviados').textContent = f.enviados;
+      document.getElementById('funilRespondidos').textContent = f.respondidos;
+      document.getElementById('funilRespondidos').style.width = (f.respondidos / maxFunil * 100) + '%';
+      document.getElementById('funilAceitos').textContent = f.aceitos;
+      document.getElementById('funilAceitos').style.width = (f.aceitos / maxFunil * 100) + '%';
+
+      // Gráfico Doughnut
+      renderizarDoughnut(k);
+
+      // Gráfico Linha
+      renderizarLinha(data.evolucao);
+
+      // Agenda
+      renderizarAgenda(data.eventosAgenda);
+    }
+
+    function renderizarDoughnut(k) {
+      var ctx = document.getElementById('chartDoughnut').getContext('2d');
+      var dados = {
+        labels: ['Pendente', 'Aceito', 'Negado', 'Negociar'],
+        datasets: [{
+          data: [k.pendentes, k.aceitos, k.negados, k.negociar],
+          backgroundColor: [
+            'rgba(255, 152, 0, 0.85)',
+            'rgba(52, 168, 83, 0.85)',
+            'rgba(234, 67, 53, 0.85)',
+            'rgba(156, 39, 176, 0.85)'
+          ],
+          borderColor: ['#ff9800', '#34a853', '#ea4335', '#9c27b0'],
+          borderWidth: 2
+        }]
+      };
+
+      if (chartDoughnut) {
+        chartDoughnut.data = dados;
+        chartDoughnut.update();
+      } else {
+        chartDoughnut = new Chart(ctx, {
+          type: 'doughnut',
+          data: dados,
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: { color: '#cbd5e1', font: { size: 11 } }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    function renderizarLinha(evolucao) {
+      var ctx = document.getElementById('chartLinha').getContext('2d');
+      var labels = evolucao.map(function(e) { return e.data; });
+      var enviados = evolucao.map(function(e) { return e.enviados; });
+      var aceitos = evolucao.map(function(e) { return e.aceitos; });
+
+      var dados = {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Enviados',
+            data: enviados,
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            tension: 0.3,
+            fill: true
+          },
+          {
+            label: 'Aceitos',
+            data: aceitos,
+            borderColor: '#34a853',
+            backgroundColor: 'rgba(52, 168, 83, 0.1)',
+            tension: 0.3,
+            fill: true
+          }
+        ]
+      };
+
+      if (chartLinha) {
+        chartLinha.data = dados;
+        chartLinha.update();
+      } else {
+        chartLinha = new Chart(ctx, {
+          type: 'line',
+          data: dados,
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: { color: '#cbd5e1', font: { size: 11 } }
+              }
+            },
+            scales: {
+              x: {
+                ticks: { color: '#64748b', font: { size: 9 } },
+                grid: { color: '#1e293b' }
+              },
+              y: {
+                beginAtZero: true,
+                ticks: { color: '#64748b', font: { size: 10 }, stepSize: 1 },
+                grid: { color: '#1e293b' }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    function renderizarAgenda(eventos) {
+      var container = document.getElementById('agendaLista');
+
+      if (!eventos || eventos.length === 0) {
+        container.innerHTML = '<div class="evento-empty">Nenhum evento confirmado próximo.</div>';
+        return;
+      }
+
+      var html = '';
+      for (var i = 0; i < eventos.length; i++) {
+        var ev = eventos[i];
+        var classe = 'evento-normal';
+        var diasClasse = 'normal';
+
+        if (ev.diasAte <= 7) {
+          classe = 'evento-urgente';
+          diasClasse = 'urgente';
+        } else if (ev.diasAte <= 30) {
+          classe = 'evento-proximo';
+          diasClasse = 'proximo';
+        }
+
+        html += '<div class="evento-item ' + classe + '">';
+        html += '<div class="evento-data">' + ev.data + '</div>';
+        html += '<div class="evento-info">';
+        html += '<div class="tipo">' + ev.tipo + '</div>';
+        html += '<div class="cli">' + ev.nome + (ev.convidados ? ' • ' + ev.convidados + ' convidados' : '') + '</div>';
+        html += '</div>';
+        html += '<div class="evento-dias ' + diasClasse + '">' + ev.diasAte + 'd</div>';
+        html += '</div>';
+      }
+
+      container.innerHTML = html;
+    }
+
+    // Init
+    document.getElementById('loadingOverlay').classList.add('show');
+    carregarDados();
+
+    // Auto-refresh a cada 30 segundos
+    setInterval(function() {
+      carregarDados();
+    }, 30000);
+  </script>
+</body>
+</html>
