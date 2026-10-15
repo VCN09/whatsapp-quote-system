@@ -46,7 +46,7 @@ Screenshots
 
 | Client Page | Executive BI |
 |:---:|:---:|
-| ![Client](assets/screenshot-client.png) | ![BI](assets/screenshot-bi.png) |
+| ![Client](Client.png) | ![BI](BI.png) |
 
 Quick Start
 
